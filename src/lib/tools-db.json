@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Salesforce CRM",
+    "usage": "Enterprise Customer Relationship Management",
+    "price": 150,
+    "minDiscount": 5,
+    "maxDiscount": 20,
+    "description": "The world's #1 CRM platform."
+  },
+  {
+    "name": "HubSpot Sales Hub",
+    "usage": "Sales and Marketing Automation",
+    "price": 90,
+    "minDiscount": 0,
+    "maxDiscount": 15,
+    "description": "Powerful, easy-to-use CRM for scaling teams."
+  },
+  {
+    "name": "Zendesk Sell",
+    "usage": "Customer Support and Sales Integration",
+    "price": 75,
+    "minDiscount": 10,
+    "maxDiscount": 25,
+    "description": "Sales CRM that improves productivity and pipeline visibility."
+  },
+  {
+    "name": "Pipedrive",
+    "usage": "Small Team Focused Sales Pipeline",
+    "price": 45,
+    "minDiscount": 0,
+    "maxDiscount": 10,
+    "description": "The first CRM designed by salespeople, for salespeople."
+  }
+]

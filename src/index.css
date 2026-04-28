@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-bg: #faf9f6;
+  --color-brand-primary: #8b4513; 
+  --color-brand-sidebar: #f5f2ed;
+  --color-brand-card: rgba(255, 255, 255, 0.7);
+  --color-brand-border: rgba(139, 69, 19, 0.1);
+  --color-brand-zinc-100: #2d241e;
+  --color-brand-zinc-300: #4a3f35;
+  --color-brand-zinc-400: #7a6a5e;
+  --color-brand-zinc-500: #8c7e73;
+  --color-brand-zinc-600: #a3958a;
+  --color-brand-zinc-700: #bdb3aa;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-brand-zinc-100 bg-brand-bg antialiased;
+    background-image: radial-gradient(rgba(139, 69, 19, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+.glass-card {
+  @apply bg-brand-card border border-brand-border rounded-xl backdrop-blur-md shadow-sm;
+}
+
+.technical-label {
+  @apply text-[10px] uppercase tracking-widest font-bold text-brand-zinc-500/80;
+}
+
+.glow-indigo {
+  box-shadow: 0 10px 40px rgba(139, 69, 19, 0.08);
+}
+
