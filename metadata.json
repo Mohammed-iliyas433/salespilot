@@ -1,0 +1,6 @@
+{
+  "name": "SalesPilot AI",
+  "description": "An agentic AI sales assistant that automates intake, proposal generation, and multi-stage negotiation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI-driven lead extraction", "Automated proposal generation", "Dynamic negotiation agent"]
+}
