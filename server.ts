@@ -5,7 +5,7 @@ import path from "path";
 import multer from "multer";
 import { createRequire } from "module";
 import mammoth from "mammoth";
-import pdf from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import cors from "cors";
 
 const require = createRequire(import.meta.url);
@@ -37,7 +37,8 @@ async function startServer() {
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       const buffer = req.file.buffer;
-      const pdfData = await pdf(buffer);
+      const parser = new PDFParse({ data: buffer });
+      const pdfData = await parser.getText();
       res.json({ text: pdfData.text || "" });
     } catch (error) {
       console.error("PDF error:", error);
