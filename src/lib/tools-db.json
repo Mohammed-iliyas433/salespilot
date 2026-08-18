@@ -5,30 +5,78 @@
     "price": 150,
     "minDiscount": 5,
     "maxDiscount": 20,
-    "description": "The world's #1 CRM platform."
+    "description": "Comprehensive CRM platform for large scale enterprise sales and customer management."
   },
   {
     "name": "HubSpot Sales Hub",
-    "usage": "Sales and Marketing Automation",
+    "usage": "Inbound Sales and Marketing Automation",
     "price": 90,
     "minDiscount": 0,
     "maxDiscount": 15,
-    "description": "Powerful, easy-to-use CRM for scaling teams."
+    "description": "Powerful, easy-to-use sales engagement CRM with automated sequences and analytics."
+  },
+  {
+    "name": "Creatio",
+    "usage": "No-Code CRM & Process Automation",
+    "price": 85,
+    "minDiscount": 5,
+    "maxDiscount": 20,
+    "description": "No-code platform for CRM and enterprise workflow automation with end-to-end customization."
   },
   {
     "name": "Zendesk Sell",
     "usage": "Customer Support and Sales Integration",
     "price": 75,
-    "minDiscount": 10,
-    "maxDiscount": 25,
-    "description": "Sales CRM that improves productivity and pipeline visibility."
+    "minDiscount": 5,
+    "maxDiscount": 18,
+    "description": "Productivity-focused sales CRM connecting customer service and sales pipeline visibility."
+  },
+  {
+    "name": "Monday Sales CRM",
+    "usage": "Visual Workflow & Deal Tracking",
+    "price": 60,
+    "minDiscount": 5,
+    "maxDiscount": 20,
+    "description": "Highly visual, customizable CRM built for collaborative deal tracking and pipeline management."
+  },
+  {
+    "name": "Zoho CRM",
+    "usage": "Omnichannel Sales & Analytics Ecosystem",
+    "price": 50,
+    "minDiscount": 5,
+    "maxDiscount": 17,
+    "description": "Versatile cloud CRM offering multichannel communication, lead scoring, and automated pipelines."
+  },
+  {
+    "name": "Insightly CRM",
+    "usage": "Project & Sales Pipeline Management",
+    "price": 49,
+    "minDiscount": 5,
+    "maxDiscount": 16,
+    "description": "Unified CRM platform connecting sales opportunities with post-sale project delivery and workflows."
+  },
+  {
+    "name": "Freshworks CRM",
+    "usage": "AI-Powered Sales & Multichannel Outreach",
+    "price": 45,
+    "minDiscount": 0,
+    "maxDiscount": 18,
+    "description": "Modern sales CRM with built-in phone, email campaigns, contact scoring, and AI deal insights."
   },
   {
     "name": "Pipedrive",
-    "usage": "Small Team Focused Sales Pipeline",
-    "price": 45,
+    "usage": "Activity-Based Sales Pipeline",
+    "price": 40,
     "minDiscount": 0,
-    "maxDiscount": 10,
-    "description": "The first CRM designed by salespeople, for salespeople."
+    "maxDiscount": 12,
+    "description": "Sales-first CRM engineered to keep sales teams focused on actions that close deals."
+  },
+  {
+    "name": "Vtiger CRM",
+    "usage": "All-in-One SMB Customer Management",
+    "price": 35,
+    "minDiscount": 0,
+    "maxDiscount": 15,
+    "description": "Cost-effective all-in-one CRM combining sales force automation, helpdesk, and inventory."
   }
 ]

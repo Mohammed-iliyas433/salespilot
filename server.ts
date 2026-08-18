@@ -31,6 +31,20 @@ async function startServer() {
     }
   });
 
+  // API Route: PDF Text Extraction
+  app.post("/api/pdf-to-text", upload.single("file"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const { PDFParse } = require("pdf-parse");
+      const parser = new PDFParse({ data: req.file.buffer });
+      const pdfText = await parser.getText();
+      res.json({ text: pdfText?.text || pdfText || "" });
+    } catch (error) {
+      console.error("PDF extraction error:", error);
+      res.status(500).json({ error: "PDF extraction failed" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

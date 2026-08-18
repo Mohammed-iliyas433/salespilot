@@ -2,19 +2,26 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# SalesPilot AI - Autonomous Sales Negotiation System
 
-This contains everything you need to run your app locally.
+SalesPilot is an autonomous sales intake, proposal architecture, and real-time deal negotiation platform powered by **Groq** (`llama-3.3-70b-versatile` & `llama-3.2-11b-vision-preview`).
 
-View your app in AI Studio: https://ai.studio/apps/fe24d8d7-722b-4ebe-86da-da0641b8e878
+## Quickstart
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js (v18+)
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Set your Groq API key in `.env`:
+   ```bash
+   GROQ_API_KEY="gsk_your_groq_api_key"
+   ```
+   *(Obtain your free API key at [console.groq.com/keys](https://console.groq.com/keys))*
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
