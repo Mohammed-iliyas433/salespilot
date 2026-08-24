@@ -1,6 +1,31 @@
+/**
+ * ============================================================================
+ * GROQ.TS - AI Core Engine & Sales Intelligence Logic
+ * ============================================================================
+ * 
+ * PURPOSE:
+ * This module powers all AI interactions for SalesPilot via Groq LLMs.
+ * It contains:
+ * 1. Groq Client Initialization & Authentication handling.
+ * 2. Safe JSON Parsing utility (handles markdown fences and raw text).
+ * 3. Model Fallback Engine (gracefully falls back if a specific model is busy or rate-limited).
+ * 4. extractLeadInfo: Natural Language / Document Lead Intake & Missing Info Detector.
+ * 5. generateProposal: Pricing & Commercial Proposal Generator based on Catalog rules.
+ * 6. negotiateProposal: AI Negotiation Officer enforcing pricing boundaries (min/max discount).
+ */
+
 import Groq from "groq-sdk";
 import toolsDb from "./tools-db.json";
 
+/**
+ * FUNCTION: getGroqClient
+ * PURPOSE:
+ * Validates and retrieves the Groq API key from environment variables,
+ * then instantiates and returns an authenticated Groq SDK client instance.
+ * 
+ * THROWS:
+ * An Error if the GROQ_API_KEY is missing or unconfigured in .env.
+ */
 function getGroqClient() {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || apiKey === "undefined" || apiKey.trim() === "" || apiKey === "API_KEY") {
@@ -14,12 +39,25 @@ function getGroqClient() {
   });
 }
 
+/**
+ * FUNCTION: parseJsonSafely
+ * PURPOSE:
+ * Robustly parses JSON strings returned by LLMs.
+ * LLMs often wrap JSON in markdown code fences (```json ... ```) or return minor whitespace.
+ * This function strips markdown wrappers and parses the inner JSON payload safely.
+ * 
+ * PARAMETERS:
+ * - text (string | null | undefined): The raw LLM text response.
+ * 
+ * RETURNS:
+ * Parsed JavaScript object, or an empty object `{}` if input is invalid/empty.
+ */
 function parseJsonSafely(text: string | null | undefined): any {
   if (!text) return {};
   try {
     return JSON.parse(text);
   } catch {
-    // Strip markdown code blocks if present
+    // Strip markdown code fences if present (e.g. ```json ... ```)
     const cleaned = text
       .replace(/```json\s*/gi, "")
       .replace(/```\s*$/gi, "")
@@ -28,7 +66,12 @@ function parseJsonSafely(text: string | null | undefined): any {
   }
 }
 
-// Active Production Groq Models
+/**
+ * ACTIVE PRODUCTION GROQ MODELS
+ * Defines the priority order of high-performance models used for chat completion
+ * and structured data extraction. If the primary model fails, the fallback engine
+ * automatically cascades down this list.
+ */
 const DEFAULT_TEXT_MODELS = [
   process.env.GROQ_MODEL,
   "openai/gpt-oss-120b",
@@ -36,6 +79,21 @@ const DEFAULT_TEXT_MODELS = [
   "qwen/qwen3.6-27b",
 ].filter(Boolean) as string[];
 
+/**
+ * FUNCTION: createChatWithFallback
+ * PURPOSE:
+ * Resilience wrapper around `groq.chat.completions.create`.
+ * Iterates through candidate models in order. If a model encounters a rate limit (429),
+ * temporary outage (503), or deprecation, it automatically retries with the next candidate.
+ * 
+ * PARAMETERS:
+ * - groq (Groq): Initialized Groq SDK client instance.
+ * - candidateModels (string[]): Ordered array of model names to try.
+ * - params (object): Standard Groq Chat Completion request parameters (messages, temperature, etc.).
+ * 
+ * RETURNS:
+ * The successful Chat Completion response from the first functioning model.
+ */
 async function createChatWithFallback(
   groq: Groq,
   candidateModels: string[],
@@ -59,7 +117,7 @@ async function createChatWithFallback(
       console.warn(
         `[Groq] Model "${model}" failed (${err?.status || err?.code || err?.message}). Trying fallback...`
       );
-      // Stop immediately on authentication errors (401)
+      // Stop immediately on authentication errors (401) to prevent wasteful retries
       if (err?.status === 401) {
         throw new Error("Invalid GROQ_API_KEY. Please verify your API key in .env");
       }
@@ -68,6 +126,27 @@ async function createChatWithFallback(
   throw lastError || new Error("All Groq model candidates failed.");
 }
 
+/**
+ * FUNCTION: extractLeadInfo
+ * PURPOSE:
+ * Analyzes unstructured incoming sales leads from text messages, emails, or uploaded documents/images.
+ * Extracts structured data: Company Name, Contact Name, User Seat Count, and Target Tool Name.
+ * 
+ * KEY FEATURES & VALIDATION:
+ * 1. Multimodal Support: Handles base64 images via vision models or text documents.
+ * 2. Strict Catalog Matching: Matches against `tools-db.json` (e.g., Salesforce, HubSpot, Zendesk).
+ * 3. Completeness Verification (`isComplete`):
+ *    Ensures all 3 required fields exist (toolName, userCount > 0, contactName).
+ * 4. Intelligent Follow-up Formulation:
+ *    If any required field is missing, crafts a precise follow-up question to prompt the customer.
+ * 
+ * PARAMETERS:
+ * - text (string): Raw intake text or email inquiry.
+ * - filePart (optional object): Base64 encoded image or document data with mimeType.
+ * 
+ * RETURNS:
+ * Object containing `{ data, isComplete, toolFound, followUpPrompt }` or `{ error }`.
+ */
 export async function extractLeadInfo(
   text: string,
   filePart?: { mimeType: string; data: string }
@@ -75,6 +154,7 @@ export async function extractLeadInfo(
   try {
     const groq = getGroqClient();
 
+    // Build tool catalog listing with base prices for system prompt context
     const catalogList = toolsDb
       .map((t) => `- "${t.name}": ${t.usage} (Base price: $${t.price}/user/mo)`)
       .join("\n");
@@ -136,6 +216,8 @@ Return strictly valid JSON:
 
     const isImage = Boolean(filePart && filePart.mimeType.startsWith("image/"));
     let completion: any;
+
+    // Route 1: Image / Vision Processing
     if (isImage) {
       try {
         completion = await createChatWithFallback(groq, ["qwen/qwen3.6-27b"], {
@@ -172,6 +254,7 @@ Return strictly valid JSON:
         });
       }
     } else {
+      // Route 2: Standard Text / Document Processing
       const userTextParts: string[] = [];
       if (text) {
         userTextParts.push(`Intake content:\n${text}`);
@@ -194,7 +277,7 @@ Return strictly valid JSON:
     const content = completion.choices[0]?.message?.content || "{}";
     const parsed = parseJsonSafely(content);
 
-    // Extract previous context if this is a follow-up answer
+    // Check if this input carries forward context from a prior multi-turn question
     let prevContext: any = {};
     const prevMatch = (text || "").match(/Previous Context:\s*(\{.*?\})/s);
     if (prevMatch) {
@@ -203,7 +286,7 @@ Return strictly valid JSON:
       } catch {}
     }
 
-    // Check for explicit catalog tool match in text, image, or previous context
+    // Resolve exact catalog tool name from user input, aliases, or previous conversation context
     const lowerInput = (text || "").toLowerCase();
     let resolvedToolName = "";
 
@@ -242,13 +325,13 @@ Return strictly valid JSON:
 
     const finalToolName = matchedTool ? matchedTool.name : "";
 
-    // Contact name validation and merging
+    // Contact name validation and fallback merging
     let contactName = (parsed.contactName || "").trim();
     if (!contactName || contactName.toLowerCase() === "lead representative" || contactName.toLowerCase() === "unknown" || contactName.toLowerCase() === "n/a") {
       contactName = (prevContext.contactName || "").trim();
     }
 
-    // User count validation and merging
+    // User count validation and fallback merging
     let userCount = Math.max(0, Number(parsed.userCount) || 0);
     if (userCount <= 0 && prevContext.userCount) {
       userCount = Math.max(0, Number(prevContext.userCount) || 0);
@@ -258,6 +341,7 @@ Return strictly valid JSON:
     const hasUsers = userCount > 0;
     const hasContact = Boolean(contactName && contactName.length > 0);
 
+    // Identify which required fields are missing
     const missingItems: string[] = [];
     if (!hasTool) {
       missingItems.push(`which CRM tool from our catalog (${toolsDb.map(t => t.name).join(", ")}) you are interested in`);
@@ -271,6 +355,7 @@ Return strictly valid JSON:
 
     const isComplete = hasTool && hasUsers && hasContact;
 
+    // Formulate a polite, dynamic follow-up prompt if any information is lacking
     let followUpPrompt = "";
     if (!isComplete) {
       if (missingItems.length === 1) {
@@ -299,6 +384,18 @@ Return strictly valid JSON:
   }
 }
 
+/**
+ * FUNCTION: generateProposal
+ * PURPOSE:
+ * Synthesizes a formal commercial proposal for an approved lead based on catalog rules.
+ * Computes base price, initial discount percentage, and final monthly license cost.
+ * 
+ * PARAMETERS:
+ * - lead (object): The lead record containing `toolName`, `userCount`, `companyName`, etc.
+ * 
+ * RETURNS:
+ * Proposal object containing `{ basePrice, discountPercent, finalPrice, terms, toolName }` or `{ error }`.
+ */
 export async function generateProposal(lead: any) {
   try {
     const groq = getGroqClient();
@@ -353,6 +450,27 @@ Return strictly valid JSON with:
   }
 }
 
+/**
+ * FUNCTION: negotiateProposal
+ * PURPOSE:
+ * Acts as the AI Sales Negotiation Officer during live client negotiations.
+ * Analyzes the client's counter-offer or objection, verifies policy boundaries,
+ * adjusts discounts within allowable limits (minDiscount% to maxDiscount%), and determines deal status.
+ * 
+ * GUARDRAILS & STATUS CODES:
+ * 1. Discount Ceiling: Strictly prevents discounts above `tool.maxDiscount%`.
+ * 2. Status 'accepted': When client agrees to current price/terms -> triggers deal approval (`approve`).
+ * 3. Status 'rejected': When client cancels or terminates conversation -> triggers cancellation (`cancel`).
+ * 4. Status 'negotiation': Ongoing back-and-forth counter-offers.
+ * 
+ * PARAMETERS:
+ * - proposal (object): Current active proposal state with pricing and terms.
+ * - userMessage (string): The latest message or counter-offer from the client.
+ * - history (array): Full transcript of prior negotiation messages.
+ * 
+ * RETURNS:
+ * Object with `{ message, newDiscountPercent, newFinalPrice, status, actionTrigger }` or `{ error }`.
+ */
 export async function negotiateProposal(
   proposal: any,
   userMessage: string,

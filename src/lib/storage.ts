@@ -1,34 +1,57 @@
+/**
+ * ============================================================================
+ * STORAGE.TS - Client-Side Data Store & Activity Audit Logger
+ * ============================================================================
+ * 
+ * PURPOSE:
+ * Manages persistent storage for Leads, Proposals, and Activity Timeline Events.
+ * It simulates a full database layer using LocalStorage and automatically
+ * logs audit timeline events on each key lifecycle change (Intake, Proposal, Negotiation, Approval).
+ */
+
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * Lead Data Model Interface
+ * Represents an inbound sales lead registered in the system.
+ */
 export interface Lead {
-  id: string;
-  companyName: string;
-  contactName: string;
-  email: string;
-  userCount: number;
-  intent: string;
-  toolName: string;
+  id: string;                                                      // Unique UUID identifier
+  companyName: string;                                             // Client company name
+  contactName: string;                                             // Primary stakeholder name
+  email: string;                                                   // Contact email address
+  userCount: number;                                               // Requested license / user seats
+  intent: string;                                                  // Description of business need
+  toolName: string;                                                // Selected CRM software from catalog
   status: 'intake' | 'proposal' | 'negotiation' | 'payment_pending' | 'closed' | 'rejected' | 'cancelled';
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
+  ownerId: string;                                                 // Sales agent owner ID
+  createdAt: string;                                               // ISO timestamp of creation
+  updatedAt: string;                                               // ISO timestamp of last update
 }
 
+/**
+ * Proposal Data Model Interface
+ * Represents the commercial pricing proposal generated for a lead.
+ */
 export interface Proposal {
-  id: string;
-  leadId: string;
-  toolName: string;
-  basePrice: number;
-  discountPercent: number;
-  finalPrice: number;
-  terms: string;
-  status: 'sent' | 'negotiation' | 'accepted' | 'rejected';
-  negotiationHistory: any[];
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
+  id: string;                                                      // Unique proposal UUID
+  leadId: string;                                                  // Associated lead UUID
+  toolName: string;                                                // Associated CRM product
+  basePrice: number;                                               // List price per user/mo
+  discountPercent: number;                                         // Applied discount %
+  finalPrice: number;                                              // Net price after discount
+  terms: string;                                                   // Commercial terms and notes
+  status: 'sent' | 'negotiation' | 'accepted' | 'rejected';        // Proposal lifecycle state
+  negotiationHistory: any[];                                       // Transcript of negotiation chat turns
+  ownerId: string;                                                 // Sales agent owner ID
+  createdAt: string;                                               // Creation timestamp
+  updatedAt: string;                                               // Last revision timestamp
 }
 
+/**
+ * ActivityEvent Data Model Interface
+ * Represents an event item displayed on the Activity Timeline & Audit Feed.
+ */
 export interface ActivityEvent {
   id: string;
   leadId?: string;
@@ -45,16 +68,33 @@ export interface ActivityEvent {
   discountPercent?: number;
 }
 
+// LocalStorage Storage Keys
 const LEADS_KEY = 'sales_pilot_leads';
 const PROPOSALS_KEY = 'sales_pilot_proposals';
 const ACTIVITIES_KEY = 'sales_pilot_activities';
 
 export const storage = {
+  /**
+   * FUNCTION: getLeads
+   * PURPOSE: Retrieves all saved leads from LocalStorage.
+   * RETURNS: Array of `Lead` objects (or empty array `[]` if none found).
+   */
   getLeads: (): Lead[] => {
     const data = localStorage.getItem(LEADS_KEY);
     return data ? JSON.parse(data) : [];
   },
   
+  /**
+   * FUNCTION: saveLead
+   * PURPOSE:
+   * Creates a new Lead with a unique UUID, attaches creation timestamps,
+   * saves it to LocalStorage, and automatically emits an audit activity event.
+   * 
+   * PARAMETERS:
+   * - lead: Lead payload without id/createdAt/updatedAt.
+   * 
+   * RETURNS: Newly created `Lead` object.
+   */
   saveLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Lead => {
     const leads = storage.getLeads();
     const newLead: Lead = {
@@ -66,7 +106,7 @@ export const storage = {
     leads.push(newLead);
     localStorage.setItem(LEADS_KEY, JSON.stringify(leads));
 
-    // Automatically log activity
+    // Automatically log timeline event for lead intake
     storage.logActivity({
       leadId: newLead.id,
       companyName: newLead.companyName,
@@ -81,6 +121,16 @@ export const storage = {
     return newLead;
   },
 
+  /**
+   * FUNCTION: updateLead
+   * PURPOSE: Updates specific fields of an existing lead by UUID and updates `updatedAt`.
+   * 
+   * PARAMETERS:
+   * - id: UUID of lead to update.
+   * - updates: Partial Lead object containing updated fields.
+   * 
+   * RETURNS: Updated `Lead` object or `null` if lead was not found.
+   */
   updateLead: (id: string, updates: Partial<Lead>): Lead | null => {
     const leads = storage.getLeads();
     const index = leads.findIndex(l => l.id === id);
@@ -95,11 +145,27 @@ export const storage = {
     return leads[index];
   },
 
+  /**
+   * FUNCTION: getProposals
+   * PURPOSE: Retrieves all proposals stored in LocalStorage.
+   * RETURNS: Array of `Proposal` objects.
+   */
   getProposals: (): Proposal[] => {
     const data = localStorage.getItem(PROPOSALS_KEY);
     return data ? JSON.parse(data) : [];
   },
 
+  /**
+   * FUNCTION: saveProposal
+   * PURPOSE:
+   * Saves a newly generated proposal to LocalStorage with UUID and timestamps,
+   * and automatically logs a 'proposal_generated' activity event.
+   * 
+   * PARAMETERS:
+   * - proposal: Proposal fields without id/createdAt/updatedAt.
+   * 
+   * RETURNS: Newly created `Proposal` object.
+   */
   saveProposal: (proposal: Omit<Proposal, 'id' | 'createdAt' | 'updatedAt'>): Proposal => {
     const proposals = storage.getProposals();
     const newProposal: Proposal = {
@@ -111,12 +177,12 @@ export const storage = {
     proposals.push(newProposal);
     localStorage.setItem(PROPOSALS_KEY, JSON.stringify(proposals));
 
-    // Look up lead company name
+    // Look up lead company name for activity feed enrichment
     const leads = storage.getLeads();
     const lead = leads.find(l => l.id === newProposal.leadId);
     const company = lead?.companyName || "Direct Client";
 
-    // Automatically log activity
+    // Automatically log timeline event for proposal generation
     storage.logActivity({
       leadId: newProposal.leadId,
       proposalId: newProposal.id,
@@ -132,6 +198,16 @@ export const storage = {
     return newProposal;
   },
 
+  /**
+   * FUNCTION: updateProposal
+   * PURPOSE: Updates an existing proposal (e.g. status changes, discounts, negotiation chat history).
+   * 
+   * PARAMETERS:
+   * - id: UUID of proposal to update.
+   * - updates: Partial Proposal object.
+   * 
+   * RETURNS: Updated `Proposal` object or `null` if not found.
+   */
   updateProposal: (id: string, updates: Partial<Proposal>): Proposal | null => {
     const proposals = storage.getProposals();
     const index = proposals.findIndex(p => p.id === id);
@@ -146,6 +222,14 @@ export const storage = {
     return proposals[index];
   },
 
+  /**
+   * FUNCTION: getActivities
+   * PURPOSE:
+   * Retrieves all chronological timeline activities from LocalStorage.
+   * If empty, automatically seeds initial timeline events from existing leads and proposals.
+   * 
+   * RETURNS: Sorted array of `ActivityEvent` (latest first).
+   */
   getActivities: (): ActivityEvent[] => {
     const data = localStorage.getItem(ACTIVITIES_KEY);
     if (data) {
@@ -198,6 +282,16 @@ export const storage = {
     return initialActivities;
   },
 
+  /**
+   * FUNCTION: logActivity
+   * PURPOSE:
+   * Prepends a new activity event to the timeline and retains up to 100 recent entries.
+   * 
+   * PARAMETERS:
+   * - activity: ActivityEvent payload (excluding id and timestamp).
+   * 
+   * RETURNS: Created `ActivityEvent` with generated UUID and timestamp.
+   */
   logActivity: (activity: Omit<ActivityEvent, 'id' | 'timestamp'>): ActivityEvent => {
     const activities = storage.getActivities();
     const newActivity: ActivityEvent = {
@@ -205,14 +299,18 @@ export const storage = {
       id: uuidv4(),
       timestamp: new Date().toISOString()
     };
-    // Add to beginning of array
+    // Add to beginning of array (latest first)
     activities.unshift(newActivity);
-    // Keep last 100 activities
+    // Keep last 100 activities for performance
     const trimmed = activities.slice(0, 100);
     localStorage.setItem(ACTIVITIES_KEY, JSON.stringify(trimmed));
     return newActivity;
   },
 
+  /**
+   * FUNCTION: clearActivities
+   * PURPOSE: Clears all activity records from LocalStorage.
+   */
   clearActivities: (): void => {
     localStorage.removeItem(ACTIVITIES_KEY);
   }
