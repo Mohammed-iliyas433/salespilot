@@ -83,7 +83,7 @@ export const storage = {
     const data = localStorage.getItem(LEADS_KEY);
     return data ? JSON.parse(data) : [];
   },
-  
+
   /**
    * FUNCTION: saveLead
    * PURPOSE:
@@ -135,11 +135,11 @@ export const storage = {
     const leads = storage.getLeads();
     const index = leads.findIndex(l => l.id === id);
     if (index === -1) return null;
-    
-    leads[index] = { 
-      ...leads[index], 
-      ...updates, 
-      updatedAt: new Date().toISOString() 
+
+    leads[index] = {
+      ...leads[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
     };
     localStorage.setItem(LEADS_KEY, JSON.stringify(leads));
     return leads[index];
@@ -212,11 +212,11 @@ export const storage = {
     const proposals = storage.getProposals();
     const index = proposals.findIndex(p => p.id === id);
     if (index === -1) return null;
-    
-    proposals[index] = { 
-      ...proposals[index], 
-      ...updates, 
-      updatedAt: new Date().toISOString() 
+
+    proposals[index] = {
+      ...proposals[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
     };
     localStorage.setItem(PROPOSALS_KEY, JSON.stringify(proposals));
     return proposals[index];

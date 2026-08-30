@@ -82,17 +82,7 @@ const DEFAULT_TEXT_MODELS = [
 /**
  * FUNCTION: createChatWithFallback
  * PURPOSE:
- * Resilience wrapper around `groq.chat.completions.create`.
- * Iterates through candidate models in order. If a model encounters a rate limit (429),
- * temporary outage (503), or deprecation, it automatically retries with the next candidate.
- * 
- * PARAMETERS:
- * - groq (Groq): Initialized Groq SDK client instance.
- * - candidateModels (string[]): Ordered array of model names to try.
- * - params (object): Standard Groq Chat Completion request parameters (messages, temperature, etc.).
- * 
- * RETURNS:
- * The successful Chat Completion response from the first functioning model.
+ * Fallback logic for groq
  */
 async function createChatWithFallback(
   groq: Groq,
@@ -131,19 +121,9 @@ async function createChatWithFallback(
  * PURPOSE:
  * Analyzes unstructured incoming sales leads from text messages, emails, or uploaded documents/images.
  * Extracts structured data: Company Name, Contact Name, User Seat Count, and Target Tool Name.
- * 
- * KEY FEATURES & VALIDATION:
- * 1. Multimodal Support: Handles base64 images via vision models or text documents.
- * 2. Strict Catalog Matching: Matches against `tools-db.json` (e.g., Salesforce, HubSpot, Zendesk).
- * 3. Completeness Verification (`isComplete`):
- *    Ensures all 3 required fields exist (toolName, userCount > 0, contactName).
- * 4. Intelligent Follow-up Formulation:
- *    If any required field is missing, crafts a precise follow-up question to prompt the customer.
- * 
  * PARAMETERS:
  * - text (string): Raw intake text or email inquiry.
  * - filePart (optional object): Base64 encoded image or document data with mimeType.
- * 
  * RETURNS:
  * Object containing `{ data, isComplete, toolFound, followUpPrompt }` or `{ error }`.
  */
@@ -283,7 +263,7 @@ Return strictly valid JSON:
     if (prevMatch) {
       try {
         prevContext = JSON.parse(prevMatch[1]);
-      } catch {}
+      } catch { }
     }
 
     // Resolve exact catalog tool name from user input, aliases, or previous conversation context
@@ -456,18 +436,6 @@ Return strictly valid JSON with:
  * Acts as the AI Sales Negotiation Officer during live client negotiations.
  * Analyzes the client's counter-offer or objection, verifies policy boundaries,
  * adjusts discounts within allowable limits (minDiscount% to maxDiscount%), and determines deal status.
- * 
- * GUARDRAILS & STATUS CODES:
- * 1. Discount Ceiling: Strictly prevents discounts above `tool.maxDiscount%`.
- * 2. Status 'accepted': When client agrees to current price/terms -> triggers deal approval (`approve`).
- * 3. Status 'rejected': When client cancels or terminates conversation -> triggers cancellation (`cancel`).
- * 4. Status 'negotiation': Ongoing back-and-forth counter-offers.
- * 
- * PARAMETERS:
- * - proposal (object): Current active proposal state with pricing and terms.
- * - userMessage (string): The latest message or counter-offer from the client.
- * - history (array): Full transcript of prior negotiation messages.
- * 
  * RETURNS:
  * Object with `{ message, newDiscountPercent, newFinalPrice, status, actionTrigger }` or `{ error }`.
  */
